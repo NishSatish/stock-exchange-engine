@@ -1,25 +1,39 @@
 package db
 
 import (
-	"database/sql"
+	"context"
 	"fmt"
-	_ "github.com/jackc/pgx/v5/stdlib" // PostgreSQL driver
+	"log"
+	"os"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
 )
 
-// InitPostgres initializes a new PostgreSQL database connection.
-func InitPostgres(connStr string) (*sql.DB, error) {
-	db, err := sql.Open("pgx", connStr)
+func InitPostgres() (*pgxpool.Pool, error) {
+	err := godotenv.Load()
 	if err != nil {
-		return nil, fmt.Errorf("error opening database: %w", err)
+		log.Fatalf("Error uis that %v", err)
+		fmt.Println("No .env file found, proceeding with environment variables.")
+	}
+
+	connStr := os.Getenv("POSTGRES_CONNECTION")
+	if connStr == "" {
+		return nil, fmt.Errorf("DATABASE_URL environment variable not set")
+	}
+
+	pool, err := pgxpool.New(context.Background(), connStr)
+	if err != nil {
+		return nil, fmt.Errorf("error creating connection pool: %w", err)
 	}
 
 	// Ping the database to verify the connection
-	err = db.Ping()
+	err = pool.Ping(context.Background())
 	if err != nil {
-		db.Close() // Close the connection if ping fails
+		pool.Close() // Close the pool if ping fails
 		return nil, fmt.Errorf("error connecting to the database: %w", err)
 	}
 
 	fmt.Println("Successfully connected to PostgreSQL!")
-	return db, nil
+	return pool, nil
 }

@@ -18,5 +18,5 @@ type Order struct {
 	Quantity  int       `json:"quantity"`
 	Price     float64   `json:"price"`
 	Timestamp time.Time `json:"timestamp"`
-	Status    string    `json:"status"` // e.g., "open", "partially_filled", "filled", "cancelled"
+	Status    string    `json:"status"` // "open", "partially_filled", "filled", "cancelled"
 }

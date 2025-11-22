@@ -2,8 +2,9 @@ package db
 
 import (
 	"context"
-	"errors"
 	"stock-exchange-simulator/pkg/models"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type IOrderRepository interface {
@@ -12,24 +13,28 @@ type IOrderRepository interface {
 }
 
 type OrderRepository struct {
+	db *pgxpool.Pool
 }
 
-var orders []models.Order
-
-func NewOrderRepository() IOrderRepository {
-	return &OrderRepository{}
+func NewOrderRepository(db *pgxpool.Pool) IOrderRepository {
+	return &OrderRepository{
+		db: db,
+	}
 }
 
 func (r *OrderRepository) CreateOrder(ctx context.Context, order models.Order) (models.Order, error) {
-	orders = append(orders, order)
+	err := r.db.QueryRow(ctx, "INSERT INTO orders (stock_id, type, quantity, price, status) VALUES ($1, $2, $3, $4, $5) RETURNING id, timestamp", order.StockID, order.Type, order.Quantity, order.Price, order.Status).Scan(&order.ID, &order.Timestamp)
+	if err != nil {
+		return models.Order{}, err
+	}
 	return order, nil
 }
 
 func (r *OrderRepository) GetOrderByID(ctx context.Context, id string) (models.Order, error) {
-	for _, order := range orders {
-		if order.ID == id {
-			return order, nil
-		}
+	var order models.Order
+	err := r.db.QueryRow(ctx, "SELECT id, stock_id, type, quantity, price, timestamp, status FROM orders WHERE id = $1", id).Scan(&order.ID, &order.StockID, &order.Type, &order.Quantity, &order.Price, &order.Timestamp, &order.Status)
+	if err != nil {
+		return models.Order{}, err
 	}
-	return models.Order{}, errors.New("order not found")
+	return order, nil
 }
