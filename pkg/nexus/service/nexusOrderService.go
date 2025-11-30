@@ -50,6 +50,7 @@ func (s *NexusService) PlaceOrder(order *models.Order) (string, error) {
 	fmt.Println("Order successfully created in db", createdOrder.ID)
 
 	queuePayload, marshallErr := json.Marshal(dto.EnqueueOrderPlacedDTO{
+		OrderID:   createdOrder.ID,
 		StockID:   order.StockID,
 		Price:     order.Price,
 		OrderType: order.Type,

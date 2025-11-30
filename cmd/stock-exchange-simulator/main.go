@@ -51,7 +51,7 @@ func logHeapStats() {
 	for range ticker.C {
 		var m runtime.MemStats
 		runtime.ReadMemStats(&m)
-		log.Printf("Heap Usage: %d KB", m.HeapAlloc/1024)
+		log.Printf("Heap Usage: %d MB", m.HeapAlloc/1024/1024)
 	}
 }
 
