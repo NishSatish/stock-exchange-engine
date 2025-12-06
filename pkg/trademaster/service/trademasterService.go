@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/hibiken/asynq"
 	"github.com/redis/go-redis/v9"
+	"slices"
 	"stock-exchange-simulator/pkg/db"
 	"stock-exchange-simulator/pkg/libs"
 	"stock-exchange-simulator/pkg/libs/taskqueue/dto"
@@ -41,26 +42,28 @@ func (this *TradeMasterService) OrderProcessor(ctx context.Context, enqueuedOrde
 	// TODO: Think about what happens when 2 matching buy sells are picked up concurrently
 	if orderDto.OrderType == models.Buy {
 		// Look for a matching sell order
-		results, err := this.libsService.RedisClient.ZRangeWithScores(ctx, sellOrderBookKey, 0, 0).Result()
+		allSellOrdersForStock, err := this.libsService.RedisClient.ZRangeWithScores(ctx, sellOrderBookKey, 0, 0).Result()
 		if err != nil && err != redis.Nil {
 			return fmt.Errorf("failed to get best sell order: %w", err)
 		}
 
-		if len(results) > 0 {
-			bestSellOrder := results[0]
-			if orderDto.Price >= bestSellOrder.Score {
-				// Match found
-				fmt.Printf("Match found for BUY order %s: selling at %f\n", orderDto.OrderID, bestSellOrder.Score)
+		if len(allSellOrdersForStock) > 0 {
+			orderMatchIndex := slices.IndexFunc(allSellOrdersForStock, func(o redis.Z) bool {
+				return o.Score == orderDto.Price
+			})
 
-				// For simplicity, assume full match for now
-				// Create trade
-				sellOrderID := bestSellOrder.Member.(string)
+			if orderMatchIndex != -1 {
+				// Match found
+				matchingOrder := allSellOrdersForStock[orderMatchIndex]
+				fmt.Printf("Match found for BUY order %s: selling at %f\n", orderDto.OrderID, matchingOrder.Score)
+
+				sellOrderID := matchingOrder.Member.(string)
 				trade := &models.Trade{
 					StockID:     orderDto.StockID,
 					BuyOrderID:  orderDto.OrderID,
 					SellOrderID: sellOrderID,
-					Quantity:    orderDto.Quantity, // Assuming full quantity match
-					Price:       bestSellOrder.Score,
+					Quantity:    orderDto.Quantity, // Assuming full quantity match TODO
+					Price:       matchingOrder.Score,
 				}
 
 				if err := this.ExecuteTrade(trade); err != nil {
@@ -91,7 +94,7 @@ func (this *TradeMasterService) OrderProcessor(ctx context.Context, enqueuedOrde
 
 		if len(results) > 0 {
 			bestBuyOrder := results[0]
-			if orderDto.Price <= bestBuyOrder.Score {
+			if orderDto.Price == bestBuyOrder.Score {
 				// Match found
 				fmt.Printf("Match found for SELL order %s: buying at %f\n", orderDto.OrderID, bestBuyOrder.Score)
 
@@ -128,11 +131,19 @@ func (this *TradeMasterService) OrderProcessor(ctx context.Context, enqueuedOrde
 }
 
 func (this *TradeMasterService) ExecuteTrade(trade *models.Trade) error {
-	_, err := this.db.TradeRepo.CreateTrade(context.Background(), *trade)
+	// TODO: Transactionalise this whole thing
+	createdTrade, err := this.db.TradeRepo.CreateTrade(context.Background(), *trade)
 	if err != nil {
 		return fmt.Errorf("failed to create trade: %w", err)
 	}
-	fmt.Printf("Trade executed successfully: %+v\n", trade)
+
+	orderIDs := []string{createdTrade.BuyOrderID, createdTrade.SellOrderID}
+	err = this.db.OrderRepo.MarkOrdersCompleteInBulk(context.Background(), orderIDs, createdTrade.ID)
+	if err != nil {
+		return fmt.Errorf("failed to mark orders as complete: %w", err)
+	}
+
+	fmt.Printf("Trade executed successfully: %+v\n", createdTrade)
 	return nil
 }
 

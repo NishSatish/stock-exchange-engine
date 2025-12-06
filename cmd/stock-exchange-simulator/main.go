@@ -3,12 +3,14 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"runtime"
 	"stock-exchange-simulator/api"
 	"stock-exchange-simulator/pkg/app"
 	"stock-exchange-simulator/pkg/db"
 	"stock-exchange-simulator/pkg/libs"
 	"stock-exchange-simulator/pkg/libs/taskqueue"
+	"strconv"
 	"time"
 
 	"github.com/hibiken/asynq"
@@ -48,10 +50,12 @@ func logHeapStats() {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
+	customLogger := log.New(os.Stdout, "[PROFILER]: ", log.LstdFlags)
+
 	for range ticker.C {
 		var m runtime.MemStats
 		runtime.ReadMemStats(&m)
-		log.Printf("Heap Usage: %d MB", m.HeapAlloc/1024/1024)
+		customLogger.Println("Heap Usage: " + strconv.FormatUint(m.HeapAlloc/1024/1024, 10) + " MB")
 	}
 }
 

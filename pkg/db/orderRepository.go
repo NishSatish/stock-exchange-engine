@@ -10,6 +10,7 @@ import (
 type IOrderRepository interface {
 	CreateOrder(ctx context.Context, order models.Order) (models.Order, error)
 	GetOrderByID(ctx context.Context, id string) (models.Order, error)
+	MarkOrdersCompleteInBulk(ctx context.Context, orderIDs []string, tradeId string) error
 }
 
 type OrderRepository struct {
@@ -37,4 +38,9 @@ func (r *OrderRepository) GetOrderByID(ctx context.Context, id string) (models.O
 		return models.Order{}, err
 	}
 	return order, nil
+}
+
+func (r *OrderRepository) MarkOrdersCompleteInBulk(ctx context.Context, orderIDs []string, tradeID string) error {
+	_, err := r.db.Exec(ctx, "UPDATE orders SET status = $2, trade_id = $3 WHERE id = ANY($1)", orderIDs, models.Completed, tradeID)
+	return err
 }
