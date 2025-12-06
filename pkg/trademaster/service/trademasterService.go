@@ -87,26 +87,29 @@ func (this *TradeMasterService) OrderProcessor(ctx context.Context, enqueuedOrde
 
 	} else if orderDto.OrderType == models.Sell {
 		// Look for a matching buy order
-		results, err := this.libsService.RedisClient.ZRevRangeWithScores(ctx, buyOrderBookKey, 0, 0).Result()
+		allBuyOrdersForStock, err := this.libsService.RedisClient.ZRevRangeWithScores(ctx, buyOrderBookKey, 0, 0).Result()
 		if err != nil && err != redis.Nil {
 			return fmt.Errorf("failed to get best buy order: %w", err)
 		}
 
-		if len(results) > 0 {
-			bestBuyOrder := results[0]
-			if orderDto.Price == bestBuyOrder.Score {
+		if len(allBuyOrdersForStock) > 0 {
+			orderMatchIndex := slices.IndexFunc(allBuyOrdersForStock, func(o redis.Z) bool {
+				return o.Score == orderDto.Price
+			})
+			if orderMatchIndex != -1 {
 				// Match found
-				fmt.Printf("Match found for SELL order %s: buying at %f\n", orderDto.OrderID, bestBuyOrder.Score)
+				matchingOrder := allBuyOrdersForStock[orderMatchIndex]
+				fmt.Printf("Match found for SELL order %s: buying at %f\n", orderDto.OrderID, matchingOrder.Score)
 
 				// For simplicity, assume full match for now
 				// Create trade
-				buyOrderID := bestBuyOrder.Member.(string)
+				buyOrderID := matchingOrder.Member.(string)
 				trade := &models.Trade{
 					StockID:     orderDto.StockID,
 					BuyOrderID:  buyOrderID,
 					SellOrderID: orderDto.OrderID,
 					Quantity:    orderDto.Quantity, // Assuming full quantity match
-					Price:       bestBuyOrder.Score,
+					Price:       matchingOrder.Score,
 				}
 
 				if err := this.ExecuteTrade(trade); err != nil {
