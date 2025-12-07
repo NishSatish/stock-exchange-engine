@@ -20,6 +20,7 @@ func SetupRouter(appServices *app.AppServices) *gin.Engine {
 		orders := v1.Group("/orders")
 		{
 			orders.POST("/place", PlaceOrderHandler(appServices))
+			orders.POST("/hydrate-orderbook", HydrateOrderbookInRedis(appServices))
 		}
 	}
 

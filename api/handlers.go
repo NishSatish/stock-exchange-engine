@@ -10,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// PlaceOrderHandler creates a Gin handler function for placing orders.
 func PlaceOrderHandler(appServices *app.AppServices) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req dto.PlaceOrderRequest
@@ -25,7 +24,7 @@ func PlaceOrderHandler(appServices *app.AppServices) gin.HandlerFunc {
 			Type:     req.Type,
 			Quantity: req.Quantity,
 			Price:    req.Price,
-			Status:   "pending", // Default status for new orders
+			Status:   models.Pending, // Default status for new orders
 		}
 
 		exchangeOrderId, err := appServices.Nexus.PlaceOrder(order)
@@ -35,5 +34,13 @@ func PlaceOrderHandler(appServices *app.AppServices) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusCreated, gin.H{"message": "Order placed successfully", "exchange_order_id": exchangeOrderId})
+	}
+}
+
+func HydrateOrderbookInRedis(appServices *app.AppServices) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		go appServices.Nexus.DumpOrderBookToRedis() // don't hang the tcp connection until the job finishes
+
+		c.JSON(http.StatusOK, gin.H{"message": "Orderbook job request received"})
 	}
 }
