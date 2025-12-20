@@ -3,7 +3,6 @@ package libs
 import (
 	"github.com/hibiken/asynq"
 	"github.com/redis/go-redis/v9"
-	"stock-exchange
 	"stock-exchange-simulator/pkg/libs/kafkaClient"
 	"stock-exchange-simulator/pkg/libs/taskqueue"
 )
@@ -27,7 +26,7 @@ func NewLibsFactory() *LibsFactory {
 		Addr: redisOpt.Addr,
 	})
 
-	kafkaFactory := kafkaClient.NewKafkaFactory()
+	kafkaFactory := kafkaClient.NewKafkaFactory("http://localhost:9092")
 
 	return &LibsFactory{
 		TaskQueueClient: taskClient,
