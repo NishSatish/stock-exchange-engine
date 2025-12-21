@@ -26,7 +26,7 @@ func NewLibsFactory() *LibsFactory {
 		Addr: redisOpt.Addr,
 	})
 
-	kafkaFactory := kafkaClient.NewKafkaFactory("http://localhost:9092")
+	kafkaFactory := kafkaClient.NewKafkaFactory("localhost:29092")
 
 	return &LibsFactory{
 		TaskQueueClient: taskClient,

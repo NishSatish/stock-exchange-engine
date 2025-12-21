@@ -3,3 +3,4 @@ roadmap.md
 nextSteps.md
 /dump.rdb
 dist
+docker_compose.yml

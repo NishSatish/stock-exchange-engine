@@ -37,6 +37,7 @@ func main() {
 
 	// Start the heap profiler in the background
 	go logHeapStats()
+	// switch up on yo day ones
 
 	router := api.SetupRouter(services)
 	log.Println("Starting server on :8080")

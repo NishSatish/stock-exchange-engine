@@ -2,6 +2,8 @@ package kafkaClient
 
 import (
 	"context"
+	"encoding/json"
+
 	"github.com/segmentio/kafka-go"
 )
 
@@ -33,4 +35,16 @@ func (kw *Writer) WriteMessages(ctx context.Context, messages ...kafka.Message) 
 // Close closes the Kafka writer.
 func (kw *Writer) Close() error {
 	return kw.w.Close()
+}
+
+func (kw *Writer) PrepareKafkaPayload(key string, value interface{}) (kafka.Message, error) {
+	// ideally should be a util, just serializes the payload to a kafka acceptable format
+	jsonValue, err := json.Marshal(value)
+	if err != nil {
+		return kafka.Message{}, err
+	}
+	return kafka.Message{
+		Key:   []byte(key),
+		Value: jsonValue,
+	}, nil
 }

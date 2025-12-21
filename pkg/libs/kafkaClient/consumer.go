@@ -2,6 +2,7 @@ package kafkaClient
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/segmentio/kafka-go"
 )
 
@@ -27,4 +28,8 @@ func (kr *Reader) ReadMessage(ctx context.Context) (kafka.Message, error) {
 // Close closes the Kafka reader.
 func (kr *Reader) Close() error {
 	return kr.r.Close()
+}
+
+func UnmarshalMessage(message kafka.Message, v interface{}) error {
+	return json.Unmarshal(message.Value, v)
 }
