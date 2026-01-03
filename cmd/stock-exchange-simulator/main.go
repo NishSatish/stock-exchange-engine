@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -28,7 +29,7 @@ func main() {
 	libsFactory := libs.NewLibsFactory()
 
 	// Init app services
-	services := app.NewAppServices(conn, libsFactory)
+	services := app.NewAppServices(context.Background(), conn, libsFactory)
 
 	// Start the asynq worker in the background
 	go runTaskServer(services)

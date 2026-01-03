@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"github.com/hibiken/asynq"
 	dbPackage "stock-exchange-simulator/pkg/db"
 	"stock-exchange-simulator/pkg/libs"
@@ -25,10 +26,11 @@ type IAppServicesInterface interface {
 // Creating a NestJS/Angular type dependency injection
 // constructor based injection, mainly i want to eliminate circular dependency
 
-func NewAppServices(db *pgxpool.Pool, libsService *libs.LibsFactory) *AppServices {
+func NewAppServices(ctx context.Context, db *pgxpool.Pool, libsService *libs.LibsFactory) *AppServices {
 	dbService := dbPackage.NewRepositoryFactory(db)
 
-	tickBusService := tickbus.NewTickBusService(db)
+	tickBusService := tickbus.NewTickBusService(ctx, libsService)
+	tickBusService.Start()
 	tradeMasterService := trademaster.NewTradeMasterService(dbService, libsService)
 	nexusService := service.NewNexusService(tradeMasterService, dbService, libsService)
 

@@ -94,7 +94,6 @@ func (this *TradeMasterService) OrderProcessor(ctx context.Context, enqueuedOrde
 	} else if orderDto.OrderType == models.Sell {
 		// Look for a matching buy order
 		allBuyOrdersForStock, err := this.libsService.RedisClient.ZRevRangeWithScores(ctx, buyOrderBookKey, 0, int64(orderDto.Price)).Result()
-		fmt.Println("AHA Here are all the buy orders that i needed", allBuyOrdersForStock)
 		if err != nil && err != redis.Nil {
 			return fmt.Errorf("failed to get best buy order: %w", err)
 		}
@@ -148,7 +147,7 @@ func (this *TradeMasterService) ExecuteTrade(trade *models.Trade) error {
 		return fmt.Errorf("failed to dispatch to kafka ltp generation queue: %w", err)
 	}
 
-	// TODO: Transactionalise this whole thing (trade creation and order completetion)
+	// HIGH PRIOTITY TODO: Transactionalise this whole thing (trade creation and order completetion)
 	createdTrade, err := this.db.TradeRepo.CreateTrade(context.Background(), *trade)
 	if err != nil {
 		return fmt.Errorf("failed to create trade: %w", err)
